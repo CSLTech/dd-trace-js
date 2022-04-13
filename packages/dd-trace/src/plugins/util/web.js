@@ -259,7 +259,9 @@ const web = {
     const span = context.span
     const error = context.error
 
-    if (!context.config.validateStatus(statusCode)) {
+    if (context.config.validateStatus(statusCode)) {
+      span.setTag(ERROR, false)
+    } else {
       span.setTag(ERROR, error || true)
     }
   },

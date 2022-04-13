@@ -749,7 +749,7 @@ describe('plugins/util/web', () => {
 
       web.addStatusError(req, 500)
 
-      expect(tags).to.not.have.property(ERROR)
+      expect(tags).to.have.property(ERROR, false)
     })
   })
 
