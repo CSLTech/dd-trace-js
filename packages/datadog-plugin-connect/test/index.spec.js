@@ -4,7 +4,6 @@ const axios = require('axios')
 const http = require('http')
 const getPort = require('get-port')
 const agent = require('../../dd-trace/test/plugins/agent')
-const plugin = require('../src')
 
 const sort = spans => spans.sort((a, b) => a.start.toString() >= b.start.toString() ? 1 : -1)
 
@@ -14,7 +13,7 @@ describe('Plugin', () => {
   let appListener
 
   describe('connect', () => {
-    withVersions(plugin, 'connect', version => {
+    withVersions('connect', 'connect', version => {
       beforeEach(() => {
         tracer = require('../../dd-trace')
       })
@@ -25,11 +24,11 @@ describe('Plugin', () => {
 
       describe('without configuration', () => {
         before(() => {
-          return agent.load('connect')
+          return agent.load(['connect', 'http'], [{}, { client: false }])
         })
 
         after(() => {
-          return agent.close()
+          return agent.close({ ritmReset: false })
         })
 
         beforeEach(() => {
@@ -100,7 +99,7 @@ describe('Plugin', () => {
           })
         })
 
-        it('should only keep the last matching path of a middleware stack', done => {
+        it('should only keep the longest matching path of a middleware stack', done => {
           const app = connect()
 
           app.use('/', (req, res, next) => next())
@@ -112,7 +111,7 @@ describe('Plugin', () => {
               .use(traces => {
                 const spans = sort(traces[0])
 
-                expect(spans[0]).to.have.property('resource', 'GET /foo')
+                expect(spans[0]).to.have.property('resource', 'GET /foo/bar')
               })
               .then(done)
               .catch(done)
@@ -465,9 +464,6 @@ describe('Plugin', () => {
                 const spans = sort(traces[0])
 
                 expect(spans[1]).to.have.property('error', 1)
-                expect(spans[1].meta).to.have.property('error.type', error.name)
-                expect(spans[1].meta).to.have.property('error.msg', error.message)
-                expect(spans[1].meta).to.have.property('error.stack', error.stack)
               })
               .then(done)
               .catch(done)
@@ -485,15 +481,15 @@ describe('Plugin', () => {
 
       describe('with configuration', () => {
         before(() => {
-          return agent.load('connect', {
+          return agent.load(['connect', 'http'], [{
             service: 'custom',
             validateStatus: code => code < 400,
             headers: ['User-Agent']
-          })
+          }, { client: false }])
         })
 
         after(() => {
-          return agent.close()
+          return agent.close({ ritmReset: false })
         })
 
         beforeEach(() => {
@@ -675,13 +671,13 @@ describe('Plugin', () => {
 
       describe('with middleware disabled', () => {
         before(() => {
-          return agent.load('connect', {
+          return agent.load(['connect', 'http'], [{
             middleware: false
-          })
+          }, { client: false }])
         })
 
         after(() => {
-          return agent.close()
+          return agent.close({ ritmReset: false })
         })
 
         beforeEach(() => {
@@ -760,9 +756,6 @@ describe('Plugin', () => {
                 const spans = sort(traces[0])
 
                 expect(spans[0]).to.have.property('error', 1)
-                expect(spans[0].meta).to.have.property('error.type', error.name)
-                expect(spans[0].meta).to.have.property('error.msg', error.message)
-                expect(spans[0].meta).to.have.property('error.stack', error.stack)
                 expect(spans[0].meta).to.have.property('http.status_code', '500')
               })
               .then(done)
